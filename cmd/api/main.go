@@ -3,6 +3,7 @@ package main
 import (
 	"alimmun-api/internal/config"
 	"alimmun-api/internal/logger"
+	"alimmun-api/internal/router"
 	"context"
 	"errors"
 	"net/http"
@@ -26,7 +27,7 @@ func main() {
 
 	log.Info("logger config imported from .env")
 
-	mux := http.NewServeMux()
+	mux := router.CreateRouter()
 
 	server := &http.Server{
 		Addr:              ":" + cfg.AppPort,
