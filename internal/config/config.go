@@ -33,6 +33,12 @@ func LoadConfig() (Config, error) {
 	if cfg.LogLevel == "" {
 		cfg.LogLevel = "info"
 	}
+	if cfg.AppENV != "development" && cfg.AppENV != "production" {
+		return Config{}, fmt.Errorf(
+			"APP_ENV must be development or production, got %q",
+			cfg.AppENV,
+		)
+	}
 
 	// required envs
 	if cfg.DatabaseURL == "" {
