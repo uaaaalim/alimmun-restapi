@@ -1,9 +1,6 @@
 package main
 
 import (
-	"alimmun-api/internal/config"
-	"alimmun-api/internal/logger"
-	"alimmun-api/internal/router"
 	"context"
 	"errors"
 	"net/http"
@@ -11,6 +8,10 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/uaaaalim/alimmun-restapi/internal/config"
+	"github.com/uaaaalim/alimmun-restapi/internal/logger"
+	"github.com/uaaaalim/alimmun-restapi/internal/router"
 )
 
 func main() {
@@ -27,11 +28,9 @@ func main() {
 
 	log.Info("logger config imported from .env")
 
-	mux := router.CreateRouter()
-
 	server := &http.Server{
 		Addr:              ":" + cfg.AppPort,
-		Handler:           mux,
+		Handler:           router.CreateRouter(),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

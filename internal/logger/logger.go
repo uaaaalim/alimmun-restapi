@@ -1,11 +1,12 @@
 package logger
 
 import (
-	"alimmun-api/internal/config"
 	"fmt"
 	"log/slog"
 	"os"
 	"strings"
+
+	"github.com/uaaaalim/alimmun-restapi/internal/config"
 )
 
 func LoadLogger(cfg config.Config) (*slog.Logger, error) {
