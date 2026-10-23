@@ -1,0 +1,27 @@
+# envs
+.env
+.env.*
+!.env.example
+
+# Собранные программы
+/bin/
+/dist/
+*.exe
+*.exe~
+*.test
+
+# Результаты тестов и профилирования
+/coverage.out
+/coverage.html
+*.prof
+
+# Логи
+*.log
+
+# Настройки IDE
+.idea/
+.vscode/
+
+# Системные файлы
+.DS_Store
+Thumbs.db
