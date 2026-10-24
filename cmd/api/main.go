@@ -40,6 +40,7 @@ func main() {
 	db, err := database.Connect(cfg.DatabaseURL)
 	if err != nil {
 		log.Error("database connection error", "error", err)
+		os.Exit(1)
 	}
 
 	sqlDB, err := db.DB()

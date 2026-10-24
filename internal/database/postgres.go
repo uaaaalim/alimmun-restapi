@@ -28,7 +28,7 @@ func Connect(dbUrl string) (*gorm.DB, error) {
 	defer cancel()
 
 	if err := sqlDB.PingContext(ctx); err != nil {
-		err := sqlDB.Close()
+		_ = sqlDB.Close()
 		return nil, err
 	}
 
