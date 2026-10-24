@@ -9,7 +9,11 @@ import (
 )
 
 func Connect(dbUrl string) (*gorm.DB, error) {
-	db, err := gorm.Open(postgres.Open(dbUrl), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(dbUrl), &gorm.Config{
+		NowFunc: func() time.Time {
+			return time.Now().UTC()
+		},
+	})
 
 	if err != nil {
 		return nil, err

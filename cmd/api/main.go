@@ -16,6 +16,7 @@ import (
 	"github.com/uaaaalim/alimmun-restapi/internal/router"
 )
 
+// main scheme: client --[https]--> cloudflare --[https TLS origin cert]--> nginx --[http]--> api
 func main() {
 	cfg, err := config.LoadConfig()
 
@@ -30,6 +31,7 @@ func main() {
 
 	log.Info("logger config imported from .env")
 
+	// http server init
 	server := &http.Server{
 		Addr:              ":" + cfg.AppPort,
 		Handler:           router.CreateRouter(),
