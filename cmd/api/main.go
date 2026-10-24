@@ -13,6 +13,7 @@ import (
 	"github.com/uaaaalim/alimmun-restapi/internal/config"
 	"github.com/uaaaalim/alimmun-restapi/internal/database"
 	"github.com/uaaaalim/alimmun-restapi/internal/logger"
+	"github.com/uaaaalim/alimmun-restapi/internal/middlewares"
 	"github.com/uaaaalim/alimmun-restapi/internal/router"
 )
 
@@ -31,10 +32,13 @@ func main() {
 
 	log.Info("logger config imported from .env")
 
+	// middlewares
+	handler := middlewares.LoggerMiddleware(log, router.CreateRouter())
+
 	// http server init
 	server := &http.Server{
 		Addr:              ":" + cfg.AppPort,
-		Handler:           router.CreateRouter(),
+		Handler:           handler,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
