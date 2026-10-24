@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"net/http"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/uaaaalim/alimmun-restapi/internal/config"
+	"github.com/uaaaalim/alimmun-restapi/internal/database"
 	"github.com/uaaaalim/alimmun-restapi/internal/logger"
 	"github.com/uaaaalim/alimmun-restapi/internal/router"
 )
@@ -34,6 +36,27 @@ func main() {
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
+	// database init
+	db, err := database.Connect(cfg.DatabaseURL)
+	if err != nil {
+		log.Error("database connection error", "error", err)
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Error("database handle failed", "error", err)
+		os.Exit(1)
+	}
+	defer func(sqlDB *sql.DB) {
+		err := sqlDB.Close()
+		if err != nil {
+			log.Error("database close failure", "error", err)
+		}
+	}(sqlDB)
+
+	log.Info("database connected successfully")
+
+	// graceful shutdown
 	ctx, stop := signal.NotifyContext(
 		context.Background(),
 		os.Interrupt,
@@ -43,7 +66,7 @@ func main() {
 
 	serverErrors := make(chan error, 1)
 	go func() {
-		log.Info("stating http server", "address", server.Addr)
+		log.Info("starting http server", "address", server.Addr)
 		serverErrors <- server.ListenAndServe()
 	}()
 
