@@ -9,7 +9,7 @@ import (
 	"github.com/uaaaalim/alimmun-restapi/internal/config"
 )
 
-func LoadLogger(cfg config.Config) (*slog.Logger, error) {
+func LoadLogger(cfg *config.Config) (*slog.Logger, error) {
 	var level slog.Level
 
 	switch strings.ToLower(cfg.LogLevel) {

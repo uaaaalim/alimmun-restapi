@@ -14,9 +14,9 @@ type Config struct {
 	LogLevel    string
 }
 
-func LoadConfig() (Config, error) {
+func LoadConfig() (*Config, error) {
 	if err := godotenv.Load(); err != nil && os.IsNotExist(err) {
-		return Config{}, fmt.Errorf(".env file not found")
+		return nil, fmt.Errorf(".env file not found")
 	}
 
 	cfg := Config{
@@ -34,7 +34,7 @@ func LoadConfig() (Config, error) {
 		cfg.LogLevel = "info"
 	}
 	if cfg.AppENV != "development" && cfg.AppENV != "production" {
-		return Config{}, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"APP_ENV must be development or production, got %q",
 			cfg.AppENV,
 		)
@@ -42,8 +42,8 @@ func LoadConfig() (Config, error) {
 
 	// required envs
 	if cfg.DatabaseURL == "" {
-		return Config{}, fmt.Errorf("DatabaseURL is required in .env")
+		return nil, fmt.Errorf("DatabaseURL is required in .env")
 	}
 
-	return cfg, nil
+	return &cfg, nil
 }
