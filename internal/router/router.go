@@ -16,11 +16,15 @@ func CreateRouter(db *gorm.DB) *http.ServeMux {
 	// GET /
 	mux.HandleFunc("GET /{$}", handlers.Home)
 
-	// /v1/auth
+	// repositories
 	userRepo := repository.NewUserRepository(db)
-	userService := services.NewAuthService(userRepo)
+	sessionRepo := repository.NewSessionRepository(db)
 
-	auth.NewHandler(userService).RegisterRoutes(mux)
+	// services
+	userService := services.NewAuthService(userRepo, sessionRepo)
+
+	// handlers
+	auth.NewHandler(userService).RegisterRoutes(mux) // for /v1/auth
 
 	return mux
 }

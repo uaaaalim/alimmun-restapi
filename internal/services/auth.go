@@ -14,12 +14,18 @@ import (
 var AuthInvalidCredentials = errors.New("invalid credentials: email or password")
 var AuthUserAlreadyExists = errors.New("user is already created")
 
-type AuthService struct {
-	UsersRepo *repository.UserRepository
+type SessionInfo struct {
+	IPAddress string
+	UserAgent string
 }
 
-func NewAuthService(usersRepo *repository.UserRepository) *AuthService {
-	return &AuthService{UsersRepo: usersRepo}
+type AuthService struct {
+	UsersRepo   *repository.UserRepository
+	SessionRepo *repository.SessionRepository
+}
+
+func NewAuthService(usersRepo *repository.UserRepository, sessionRepo *repository.SessionRepository) *AuthService {
+	return &AuthService{UsersRepo: usersRepo, SessionRepo: sessionRepo}
 }
 
 func (s *AuthService) Login(
@@ -74,4 +80,11 @@ func (s *AuthService) Register(
 	}
 
 	return user, nil
+}
+func (s *AuthService) CreateSession(ctx context.Context, session *models.Session) error {
+	if err := s.SessionRepo.Create(ctx, session); err != nil {
+		return fmt.Errorf("create session: %w", err)
+	}
+
+	return nil
 }
