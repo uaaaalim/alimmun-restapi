@@ -10,6 +10,7 @@ import (
 
 func Connect(dbUrl string) (*gorm.DB, error) {
 	db, err := gorm.Open(postgres.Open(dbUrl), &gorm.Config{
+		TranslateError: true,
 		NowFunc: func() time.Time {
 			return time.Now().UTC()
 		},

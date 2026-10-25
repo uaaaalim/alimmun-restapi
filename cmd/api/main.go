@@ -32,16 +32,6 @@ func main() {
 
 	log.Info("logger config imported from .env")
 
-	// middlewares
-	handler := middlewares.LoggerMiddleware(log, router.CreateRouter())
-
-	// http server init
-	server := &http.Server{
-		Addr:              ":" + cfg.AppPort,
-		Handler:           handler,
-		ReadHeaderTimeout: 5 * time.Second,
-	}
-
 	// database init
 	db, err := database.Connect(cfg.DatabaseURL)
 	if err != nil {
@@ -62,6 +52,16 @@ func main() {
 	}(sqlDB)
 
 	log.Info("database connected successfully")
+
+	// middlewares
+	handler := middlewares.LoggerMiddleware(log, router.CreateRouter(db))
+
+	// http server init
+	server := &http.Server{
+		Addr:              ":" + cfg.AppPort,
+		Handler:           handler,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
 
 	// graceful shutdown
 	ctx, stop := signal.NotifyContext(
