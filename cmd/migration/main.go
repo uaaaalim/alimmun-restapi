@@ -3,7 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -13,15 +13,42 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/joho/godotenv"
+	"github.com/uaaaalim/alimmun-restapi/internal/config"
+	"github.com/uaaaalim/alimmun-restapi/internal/logger"
 )
 
 const migrationsPath = "migrations"
 
 func main() {
-	_ = godotenv.Load()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+
+	if err := run(); err != nil {
+		slog.Error("migration failed", "error", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
+	if err := godotenv.Load(); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("load .env: %w", err)
+	}
+
+	level := os.Getenv("LOG_LEVEL")
+	if level == "" {
+		level = "info"
+	}
+
+	log, err := logger.LoadLogger(&config.Config{
+		AppENV:   os.Getenv("APP_ENV"),
+		LogLevel: level,
+	})
+	if err != nil {
+		return err
+	}
+	slog.SetDefault(log)
 
 	if len(os.Args) < 2 {
-		log.Fatal("usage: migrate <up|down|migrate|version|create|force>")
+		return fmt.Errorf("usage: migrate <up|down|migrate|version|create|force>")
 	}
 
 	command := os.Args[1]
@@ -29,24 +56,31 @@ func main() {
 	// Creating SQL files doesn't require a database.
 	if command == "create" {
 		if len(os.Args) != 3 {
-			log.Fatal("usage: migrate create <name>")
+			return fmt.Errorf("usage: migrate create <name>")
+		} else if err := createMigration(os.Args[2]); err != nil {
+			return err
 		}
-		if err := createMigration(os.Args[2]); err != nil {
-			log.Fatal(err)
-		}
-		return
+		return nil
 	}
 
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
-		log.Fatal("DATABASE_URL is required in .env")
+		return fmt.Errorf("DATABASE_URL is required in .env")
 	}
 
 	m, err := migrate.New("file://"+migrationsPath, dsn)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	defer m.Close()
+	defer func() {
+		sourceErr, databaseErr := m.Close()
+		if sourceErr != nil {
+			slog.Error("failed to close migration source", "error", sourceErr)
+		}
+		if databaseErr != nil {
+			slog.Error("failed to close migration database", "error", databaseErr)
+		}
+	}()
 
 	switch command {
 	case "up":
@@ -57,51 +91,52 @@ func main() {
 
 	case "migrate":
 		if len(os.Args) != 3 {
-			log.Fatal("usage: migrate migrate <version>")
+			return fmt.Errorf("usage: migrate migrate <version>")
 		}
 
 		version, parseErr := strconv.ParseUint(os.Args[2], 10, 64)
 		if parseErr != nil {
-			log.Fatal(parseErr)
+			return parseErr
 		}
 		err = m.Migrate(uint(version))
 
 	case "version":
 		version, dirty, versionErr := m.Version()
 		if errors.Is(versionErr, migrate.ErrNilVersion) {
-			fmt.Println("No migrations applied")
-			return
+			slog.Info("No migrations applied")
+			return nil
 		}
 		if versionErr != nil {
-			log.Fatal(versionErr)
+			return versionErr
 		}
-		fmt.Printf("Version: %d, Dirty: %t\n", version, dirty)
-		return
+		slog.Info("migration version", "version", version, "dirty", dirty)
+		return nil
 
 	case "force":
 		if len(os.Args) != 3 {
-			log.Fatal("usage: migrate force <version>")
+			return fmt.Errorf("usage: migrate force <version>")
 		}
 
 		version, parseErr := strconv.Atoi(os.Args[2])
 		if parseErr != nil {
-			log.Fatal(parseErr)
+			return parseErr
 		}
 		err = m.Force(version)
 
 	default:
-		log.Fatalf("unknown command: %s", command)
+		return fmt.Errorf("unknown command: %s", command)
 	}
 
 	if errors.Is(err, migrate.ErrNoChange) {
-		fmt.Println("No changes")
-		return
+		slog.Info("No changes")
+		return nil
 	}
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	fmt.Println("Migration completed successfully")
+	slog.Info("Migration completed successfully")
+	return nil
 }
 
 func createMigration(name string) error {
@@ -132,7 +167,7 @@ func createMigration(name string) error {
 			return err
 		}
 
-		fmt.Println("Created:", filename)
+		slog.Info("migration file created", "path", filename)
 	}
 
 	return nil

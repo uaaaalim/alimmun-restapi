@@ -54,8 +54,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 			"USER_ALREADY_EXISTS", "Пользователь с таким email уже существует")
 		return
 	} else if err != nil {
-		response.Fault(w, http.StatusInternalServerError,
-			"INTERNAL_ERROR", "Не удалось создать пользователя")
+		response.InternalError(w, r, err)
 		return
 	}
 
@@ -109,8 +108,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 			"INVALID_CREDENTIALS", "Invalid email or password")
 		return
 	} else if err != nil {
-		response.Fault(w, http.StatusInternalServerError,
-			"INTERNAL_ERROR", "Failed to login")
+		response.InternalError(w, r, err)
 		return
 	}
 
@@ -126,8 +124,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	// creating new login session
 	token, tokenHash, err := security.GenerateSessionToken()
 	if err != nil {
-		response.Fault(w, http.StatusInternalServerError,
-			"INTERNAL_ERROR", "Failed to login")
+		response.InternalError(w, r, err)
 		return
 	}
 
@@ -148,8 +145,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.AuthService.CreateSession(r.Context(), session); err != nil {
-		response.Fault(w, http.StatusInternalServerError,
-			"INTERNAL_ERROR", "Failed to create session")
+		response.InternalError(w, r, err)
 		return
 	}
 

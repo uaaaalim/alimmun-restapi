@@ -15,8 +15,8 @@ type Config struct {
 }
 
 func LoadConfig() (*Config, error) {
-	if err := godotenv.Load(); err != nil && os.IsNotExist(err) {
-		return nil, fmt.Errorf(".env file not found")
+	if err := godotenv.Load(); err != nil {
+		return nil, err
 	}
 
 	cfg := Config{
@@ -35,7 +35,7 @@ func LoadConfig() (*Config, error) {
 	}
 	if cfg.AppENV != "development" && cfg.AppENV != "production" {
 		return nil, fmt.Errorf(
-			"APP_ENV must be development or production, got %q",
+			"APP_ENV must be either \"development\" or \"production\", got %q",
 			cfg.AppENV,
 		)
 	}

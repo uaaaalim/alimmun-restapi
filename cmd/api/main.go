@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -19,21 +20,25 @@ import (
 
 // main scheme: client --[https]--> cloudflare --[https TLS origin cert]--> nginx --[http]--> api
 func main() {
-	cfg, err := config.LoadConfig()
+	bootstrap := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
+	cfg, err := config.LoadConfig()
 	if err != nil {
-		panic(err)
+		bootstrap.Error("failed to load config", "error", err)
+		os.Exit(1)
 	}
 
 	log, err := logger.LoadLogger(cfg)
 	if err != nil {
-		panic(err)
+		bootstrap.Error("failed to initialize logger", "error", err)
+		os.Exit(1)
 	}
 
+	slog.SetDefault(log)
 	log.Info("logger config imported from .env")
 
 	// database init
-	db, err := database.Connect(cfg.DatabaseURL)
+	db, err := database.Connect(cfg.DatabaseURL, log)
 	if err != nil {
 		log.Error("database connection error", "error", err)
 		os.Exit(1)
@@ -61,6 +66,7 @@ func main() {
 		Addr:              ":" + cfg.AppPort,
 		Handler:           handler,
 		ReadHeaderTimeout: 5 * time.Second,
+		ErrorLog:          slog.NewLogLogger(log.Handler(), slog.LevelError),
 	}
 
 	// graceful shutdown
@@ -97,8 +103,8 @@ func main() {
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Error("graceful shutdown error", "error", err)
-		err := server.Close()
-		if err != nil {
+		if err := server.Close(); err != nil {
+			log.Error("failed to close HTTP server", "error", err)
 			return
 		}
 		return

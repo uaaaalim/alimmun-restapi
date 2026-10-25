@@ -2,15 +2,18 @@ package database
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
+	"github.com/uaaaalim/alimmun-restapi/internal/logger"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-func Connect(dbUrl string) (*gorm.DB, error) {
+func Connect(dbUrl string, log *slog.Logger) (*gorm.DB, error) {
 	db, err := gorm.Open(postgres.Open(dbUrl), &gorm.Config{
 		TranslateError: true,
+		Logger:         logger.NewGORMLogger(log),
 		NowFunc: func() time.Time {
 			return time.Now().UTC()
 		},
