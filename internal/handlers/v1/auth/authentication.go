@@ -115,6 +115,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// X-Real-IP header is required (using with proxy)
+	// PUBLIC ACCESS IS STRICTLY PROHIBITED, USE WITH LOCAL PROXY
 	ip, err := netip.ParseAddr(r.Header.Get("X-Real-IP"))
 	if err != nil {
 		response.Fault(w, http.StatusBadRequest,
