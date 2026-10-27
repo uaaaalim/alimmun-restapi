@@ -6,13 +6,16 @@ info:
 http:
   method: POST
   url: "{{baseUrl}}/v1/auth/login"
+  headers:
+    - name: X-Real-IP
+      value: 192.168.101.5
   body:
     type: json
     data: |-
       {
         "name": "Alim",
         "email": "zhaba.v.kedah77@gmail.com",
-        "password": "12345678"
+        "password": "123452678"
       }
   auth: inherit
 

@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
+	"strconv"
+	"time"
 	"uuid"
 )
 
@@ -84,4 +87,19 @@ func internalError(w http.ResponseWriter, ctx context.Context, err error, attrs 
 		internalErrorMessage, errorID,
 	))
 	writeJSON(w, http.StatusInternalServerError, data)
+}
+
+func TooManyRequests(w http.ResponseWriter, remainingTime time.Duration) {
+	seconds := max(int64(math.Ceil(remainingTime.Seconds())), 1)
+
+	w.Header().Set("Retry-After", strconv.FormatInt(seconds, 10))
+
+	JSON(w, http.StatusTooManyRequests, Response{
+		Success: false,
+		Data:    nil,
+		Error: &APIError{
+			Code:    "TOO_MANY_REQUESTS",
+			Message: fmt.Sprintf("Try again in %d seconds", seconds),
+		},
+	})
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/uaaaalim/alimmun-restapi/internal/common/security"
 	"github.com/uaaaalim/alimmun-restapi/internal/models"
@@ -20,12 +21,17 @@ type SessionInfo struct {
 }
 
 type AuthService struct {
-	UsersRepo   *repository.UserRepository
-	SessionRepo *repository.SessionRepository
+	UsersRepo        *repository.UserRepository
+	SessionRepo      *repository.SessionRepository
+	LoginAttemptRepo *repository.LoginAttemptRepository
 }
 
-func NewAuthService(usersRepo *repository.UserRepository, sessionRepo *repository.SessionRepository) *AuthService {
-	return &AuthService{UsersRepo: usersRepo, SessionRepo: sessionRepo}
+func NewAuthService(
+	usersRepo *repository.UserRepository,
+	sessionRepo *repository.SessionRepository,
+	loginAttemptRepo *repository.LoginAttemptRepository,
+) *AuthService {
+	return &AuthService{UsersRepo: usersRepo, SessionRepo: sessionRepo, LoginAttemptRepo: loginAttemptRepo}
 }
 
 func (s *AuthService) Login(
@@ -81,9 +87,68 @@ func (s *AuthService) Register(
 
 	return user, nil
 }
+
 func (s *AuthService) CreateSession(ctx context.Context, session *models.Session) error {
 	if err := s.SessionRepo.Create(ctx, session); err != nil {
 		return fmt.Errorf("create session: %w", err)
+	}
+
+	return nil
+}
+
+func (s *AuthService) RecordLoginFailure(ctx context.Context, ip, email string) error {
+	const (
+		maxAttempts    = 5
+		attemptsWindow = 15 * time.Minute
+		banTime        = 30 * time.Minute
+	)
+
+	count, err := s.LoginAttemptRepo.IncrementAttempt(ctx, ip, email)
+	if err != nil {
+		return fmt.Errorf("increment attempt: %w", err)
+	}
+
+	if count == 1 {
+		if err := s.LoginAttemptRepo.ExpireAttempts(ctx, ip, email, attemptsWindow); err != nil {
+			return fmt.Errorf("expire attempts: %w", err)
+		}
+	} else if count >= maxAttempts {
+		if err := s.LoginAttemptRepo.BanTemporaryByCredentials(ctx, ip, email, banTime); err != nil {
+			return fmt.Errorf("set ban with duration: %w", err)
+		}
+
+		if err := s.LoginAttemptRepo.ResetFailures(ctx, ip, email); err != nil {
+			return fmt.Errorf("delete attempts: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (s *AuthService) BanRemaining(ctx context.Context, ip, email string) (time.Duration, error) {
+	remaining, err := s.LoginAttemptRepo.BanRemaining(ctx, ip, email)
+	if err != nil {
+		return 0, fmt.Errorf("get login ban duration: %w", err)
+	}
+
+	// -2 unknown key, -1 no ttl
+	switch remaining {
+	case -2:
+		return 0, nil
+	case -1:
+		return 0, fmt.Errorf("login ban has no expiration")
+	}
+
+	if remaining == 0 {
+		return time.Millisecond, nil
+	}
+
+	return remaining, nil
+}
+
+func (s *AuthService) ResetLoginFailures(ctx context.Context, ip, email string) error {
+	if err := s.LoginAttemptRepo.ResetFailures(ctx, ip, email); err != nil {
+		return fmt.Errorf("reset login attempts: %w", err)
 	}
 
 	return nil

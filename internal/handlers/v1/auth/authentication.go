@@ -76,6 +76,15 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	// X-Real-IP header is required (using with proxy)
+	// PUBLIC ACCESS IS STRICTLY PROHIBITED, USE WITH LOCAL PROXY
+	ip, err := netip.ParseAddr(r.Header.Get("X-Real-IP"))
+	if err != nil {
+		response.Fault(w, http.StatusBadRequest,
+			"INVALID_CLIENT_IP", "The client's IP is incorrect")
+		return
+	}
+
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 
 	var body struct {
@@ -101,23 +110,28 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	banDuration, err := h.AuthService.BanRemaining(r.Context(), ip.String(), body.Email)
+	if err != nil {
+		response.InternalError(w, r, err)
+		return
+	} else if banDuration != 0 {
+		response.TooManyRequests(w, banDuration)
+		return
+	}
+
 	user, err := h.AuthService.Login(r.Context(), body.Email, body.Password)
 
 	if errors.Is(err, services.AuthInvalidCredentials) {
+		err := h.AuthService.RecordLoginFailure(r.Context(), ip.String(), body.Email)
+		if err != nil {
+			response.InternalError(w, r, err)
+			return
+		}
 		response.Fault(w, http.StatusUnauthorized,
 			"INVALID_CREDENTIALS", "Invalid email or password")
 		return
 	} else if err != nil {
 		response.InternalError(w, r, err)
-		return
-	}
-
-	// X-Real-IP header is required (using with proxy)
-	// PUBLIC ACCESS IS STRICTLY PROHIBITED, USE WITH LOCAL PROXY
-	ip, err := netip.ParseAddr(r.Header.Get("X-Real-IP"))
-	if err != nil {
-		response.Fault(w, http.StatusBadRequest,
-			"INVALID_CLIENT_IP", "The client's IP is incorrect")
 		return
 	}
 
@@ -142,6 +156,11 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		LastSeenAt: now,
 		ExpiresAt:  expiresAt,
 		RevokedAt:  nil,
+	}
+
+	if err := h.AuthService.ResetLoginFailures(r.Context(), ip.String(), body.Email); err != nil {
+		response.InternalError(w, r, err)
+		return
 	}
 
 	if err := h.AuthService.CreateSession(r.Context(), session); err != nil {

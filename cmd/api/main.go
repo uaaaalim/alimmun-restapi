@@ -58,8 +58,23 @@ func main() {
 
 	log.Info("database connected successfully")
 
+	// redis init
+	redisConnection, err := database.ConnectRedis(cfg.RedisURL, cfg.RedisPrefix)
+	if err != nil {
+		log.Error("redis connection error", "error", err)
+		os.Exit(1)
+	}
+
+	defer func() {
+		if err := redisConnection.Redis.Close(); err != nil {
+			log.Error("redis close failure", "error", err)
+		}
+	}()
+
+	log.Info("redis connected successfully")
+
 	// middlewares
-	handler := middlewares.LoggerMiddleware(log, router.CreateRouter(db))
+	handler := middlewares.LoggerMiddleware(log, router.CreateRouter(db, redisConnection))
 
 	// http server init
 	server := &http.Server{
