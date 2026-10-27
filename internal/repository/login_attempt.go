@@ -19,19 +19,19 @@ func NewLoginAttemptRepository(redisConnection *database.RedisConnection) *Login
 	return &LoginAttemptRepository{Redis: redisConnection.Redis, RedisPrefix: redisConnection.Prefix}
 }
 
-func (repo *LoginAttemptRepository) keys(ip, email, category string) string {
+func (repo *LoginAttemptRepository) keys(ip, email, action string) string {
 	id := fmt.Sprintf("%x", sha256.Sum256(
 		[]byte(ip+"\x00"+email),
 	))
 
-	return repo.RedisPrefix + ":auth:" + category + ":" + id
+	return repo.RedisPrefix + ":auth:" + action + ":" + id
 }
 
 func (repo *LoginAttemptRepository) BanRemaining(
 	ctx context.Context,
 	ip, email string,
 ) (time.Duration, error) {
-	key := repo.keys(ip, email, "bans")
+	key := repo.keys(ip, email, "login:bans")
 
 	remaining, err := repo.Redis.PTTL(ctx, key).Result()
 	if err != nil {
@@ -42,7 +42,7 @@ func (repo *LoginAttemptRepository) BanRemaining(
 }
 
 func (repo *LoginAttemptRepository) ResetFailures(ctx context.Context, ip, email string) error {
-	key := repo.keys(ip, email, "attempts")
+	key := repo.keys(ip, email, "login:attempts")
 
 	if err := repo.Redis.Del(ctx, key).Err(); err != nil {
 		return err
@@ -51,8 +51,8 @@ func (repo *LoginAttemptRepository) ResetFailures(ctx context.Context, ip, email
 	return nil
 }
 
-func (repo *LoginAttemptRepository) IncrementAttempt(ctx context.Context, ip, email string) (int64, error) {
-	count, err := repo.Redis.Incr(ctx, repo.keys(ip, email, "attempts")).Result()
+func (repo *LoginAttemptRepository) IncrementLoginAttempt(ctx context.Context, ip, email string) (int64, error) {
+	count, err := repo.Redis.Incr(ctx, repo.keys(ip, email, "login:attempts")).Result()
 	if err != nil {
 		return 0, err
 	}
@@ -60,18 +60,22 @@ func (repo *LoginAttemptRepository) IncrementAttempt(ctx context.Context, ip, em
 	return count, nil
 }
 
-func (repo *LoginAttemptRepository) ExpireAttempts(ctx context.Context, ip, email string, time time.Duration) error {
-	if err := repo.Redis.Expire(ctx, repo.keys(ip, email, "attempts"), time).Err(); err != nil {
+func (repo *LoginAttemptRepository) ExpireAttempts(
+	ctx context.Context,
+	ip, email string,
+	duration time.Duration,
+) error {
+	if err := repo.Redis.Expire(ctx, repo.keys(ip, email, "login:attempts"), duration).Err(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (repo *LoginAttemptRepository) BanTemporaryByCredentials(
+func (repo *LoginAttemptRepository) BanAttempts(
 	ctx context.Context, ip, email string, duration time.Duration,
 ) error {
-	if err := repo.Redis.Set(ctx, repo.keys(ip, email, "bans"), "1", duration).Err(); err != nil {
+	if err := repo.Redis.Set(ctx, repo.keys(ip, email, "login:bans"), "1", duration).Err(); err != nil {
 		return err
 	}
 

@@ -21,9 +21,10 @@ func CreateRouter(db *gorm.DB, redis *database.RedisConnection) *http.ServeMux {
 	userRepo := repository.NewUserRepository(db)
 	sessionRepo := repository.NewSessionRepository(db)
 	loginAttemptRepo := repository.NewLoginAttemptRepository(redis)
+	registrationLimitRepo := repository.NewRegistrationLimitRepository(redis)
 
 	// services
-	userService := services.NewAuthService(userRepo, sessionRepo, loginAttemptRepo)
+	userService := services.NewAuthService(userRepo, sessionRepo, loginAttemptRepo, registrationLimitRepo)
 
 	// handlers
 	auth.NewHandler(userService).RegisterRoutes(mux) // for /v1/auth

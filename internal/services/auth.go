@@ -21,17 +21,24 @@ type SessionInfo struct {
 }
 
 type AuthService struct {
-	UsersRepo        *repository.UserRepository
-	SessionRepo      *repository.SessionRepository
-	LoginAttemptRepo *repository.LoginAttemptRepository
+	UsersRepo             *repository.UserRepository
+	SessionRepo           *repository.SessionRepository
+	LoginAttemptRepo      *repository.LoginAttemptRepository
+	RegistrationLimitRepo *repository.RegistrationLimitRepository
 }
 
 func NewAuthService(
 	usersRepo *repository.UserRepository,
 	sessionRepo *repository.SessionRepository,
 	loginAttemptRepo *repository.LoginAttemptRepository,
+	registrationLimitRepo *repository.RegistrationLimitRepository,
 ) *AuthService {
-	return &AuthService{UsersRepo: usersRepo, SessionRepo: sessionRepo, LoginAttemptRepo: loginAttemptRepo}
+	return &AuthService{
+		UsersRepo:             usersRepo,
+		SessionRepo:           sessionRepo,
+		LoginAttemptRepo:      loginAttemptRepo,
+		RegistrationLimitRepo: registrationLimitRepo,
+	}
 }
 
 func (s *AuthService) Login(
@@ -96,6 +103,8 @@ func (s *AuthService) CreateSession(ctx context.Context, session *models.Session
 	return nil
 }
 
+// rate limiting
+
 func (s *AuthService) RecordLoginFailure(ctx context.Context, ip, email string) error {
 	const (
 		maxAttempts    = 5
@@ -103,7 +112,7 @@ func (s *AuthService) RecordLoginFailure(ctx context.Context, ip, email string) 
 		banTime        = 30 * time.Minute
 	)
 
-	count, err := s.LoginAttemptRepo.IncrementAttempt(ctx, ip, email)
+	count, err := s.LoginAttemptRepo.IncrementLoginAttempt(ctx, ip, email)
 	if err != nil {
 		return fmt.Errorf("increment attempt: %w", err)
 	}
@@ -113,7 +122,7 @@ func (s *AuthService) RecordLoginFailure(ctx context.Context, ip, email string) 
 			return fmt.Errorf("expire attempts: %w", err)
 		}
 	} else if count >= maxAttempts {
-		if err := s.LoginAttemptRepo.BanTemporaryByCredentials(ctx, ip, email, banTime); err != nil {
+		if err := s.LoginAttemptRepo.BanAttempts(ctx, ip, email, banTime); err != nil {
 			return fmt.Errorf("set ban with duration: %w", err)
 		}
 
@@ -125,7 +134,7 @@ func (s *AuthService) RecordLoginFailure(ctx context.Context, ip, email string) 
 	return nil
 }
 
-func (s *AuthService) BanRemaining(ctx context.Context, ip, email string) (time.Duration, error) {
+func (s *AuthService) LoginBanRemaining(ctx context.Context, ip, email string) (time.Duration, error) {
 	remaining, err := s.LoginAttemptRepo.BanRemaining(ctx, ip, email)
 	if err != nil {
 		return 0, fmt.Errorf("get login ban duration: %w", err)
@@ -144,6 +153,10 @@ func (s *AuthService) BanRemaining(ctx context.Context, ip, email string) (time.
 	}
 
 	return remaining, nil
+}
+
+func (s *AuthService) RegisterBanRemaining(ctx context.Context, ip string) (time.Duration, error) {
+	return s.RegistrationLimitRepo.BanRemaining(ctx, ip)
 }
 
 func (s *AuthService) ResetLoginFailures(ctx context.Context, ip, email string) error {
