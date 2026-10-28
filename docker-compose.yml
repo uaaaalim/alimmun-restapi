@@ -1,0 +1,29 @@
+services:
+  alimmun-restapi:
+    build: .
+    container_name: "alimmun-restapi"
+    env_file:
+      - .env
+    restart: "unless-stopped"
+    networks:
+      - redis
+      - database
+      - proxy
+
+  alimmun-api-migrate:
+    build: .
+    container_name: "alimmun-api-migrate"
+    env_file:
+      - .env
+    command: ["/app/migrate", "up"]
+    restart: "no"
+    networks:
+      - database
+
+networks:
+  redis:
+    external: true
+  database:
+    external: true
+  proxy:
+    external: true

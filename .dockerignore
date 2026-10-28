@@ -1,0 +1,7 @@
+.git
+.idea
+.env
+.env.*
+!.env.example
+*.exe
+*.log
