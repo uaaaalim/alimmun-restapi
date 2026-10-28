@@ -20,9 +20,7 @@ type Config struct {
 }
 
 func LoadConfig() (*Config, error) {
-	if err := godotenv.Load(); err != nil {
-		return nil, err
-	}
+	_ = godotenv.Load()
 
 	cfg := Config{
 		AppENV:      os.Getenv("APP_ENV"),
@@ -42,7 +40,7 @@ func LoadConfig() (*Config, error) {
 	}
 	if cfg.AppENV != "development" && cfg.AppENV != "production" {
 		return nil, fmt.Errorf(
-			"APP_ENV must be either \"development\" or \"production\", got %q",
+			"APP_ENV must be either \"development\" or \"production\", got %q. Make sure you've set up ENV",
 			cfg.AppENV,
 		)
 	}
