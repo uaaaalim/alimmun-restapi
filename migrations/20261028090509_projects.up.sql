@@ -45,4 +45,4 @@ CREATE TABLE projects_technologies (
 );
 
 CREATE INDEX idx_projects_technologies_technology_id
-    ON project_technologies(id);
+    ON projects_technologies(technology_id);
