@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/uaaaalim/alimmun-restapi/internal/common/security"
@@ -14,6 +15,8 @@ import (
 
 var AuthInvalidCredentials = errors.New("invalid credentials: email or password")
 var AuthUserAlreadyExists = errors.New("user is already created")
+var AuthInvalidSession = errors.New("invalid session")
+var AuthAdminRequired = errors.New("admin role required")
 
 type SessionInfo struct {
 	IPAddress string
@@ -101,6 +104,45 @@ func (s *AuthService) CreateSession(ctx context.Context, session *models.Session
 	}
 
 	return nil
+}
+
+func (s *AuthService) ValidateSession(ctx context.Context, authorization string) (*models.Session, error) {
+	parts := strings.Fields(authorization)
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+		return nil, AuthInvalidSession
+	}
+
+	tokenHash := security.HashSessionToken(parts[1])
+	session, err := s.SessionRepo.FindByTokenHash(ctx, tokenHash)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, AuthInvalidSession
+	}
+	if err != nil {
+		return nil, fmt.Errorf("find session: %w", err)
+	}
+	if session.RevokedAt != nil || !time.Now().Before(session.ExpiresAt) {
+		return nil, AuthInvalidSession
+	}
+
+	return session, nil
+}
+
+func (s *AuthService) ValidateAdminSession(ctx context.Context, authorization string) (*models.Session, error) {
+	session, err := s.ValidateSession(ctx, authorization)
+	if err != nil {
+		return nil, err
+	}
+	user, err := s.UsersRepo.GetByID(ctx, session.UserID)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, AuthInvalidSession
+	}
+	if err != nil {
+		return nil, fmt.Errorf("find session user: %w", err)
+	}
+	if user.Role != models.RoleAdmin {
+		return nil, AuthAdminRequired
+	}
+	return session, nil
 }
 
 // rate limiting

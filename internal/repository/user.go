@@ -15,6 +15,14 @@ func NewUserRepository(db *gorm.DB) *UserRepository {
 	return &UserRepository{DB: db}
 }
 
+func (repo *UserRepository) GetByID(ctx context.Context, id int64) (*models.User, error) {
+	var user models.User
+	if err := repo.DB.WithContext(ctx).First(&user, id).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
 func (repo *UserRepository) GetByEmail(ctx context.Context, email string) (*models.User, error) {
 	var user models.User
 
