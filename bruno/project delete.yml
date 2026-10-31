@@ -1,0 +1,18 @@
+info:
+  name: project delete
+  type: http
+  seq: 8
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/v1/projects/2"
+  headers:
+    - name: Authorization
+      value: Bearer {{token}}
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true

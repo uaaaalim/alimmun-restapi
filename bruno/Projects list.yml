@@ -1,11 +1,18 @@
 info:
-  name: Projects list
+  name: projects list
   type: http
-  seq: 3
+  seq: 6
 
 http:
   method: GET
-  url: "{{baseUrl}}/v1/projects"
+  url: "{{baseUrl}}/v1/projects?page=1&page_size=50"
+  params:
+    - name: page
+      value: "1"
+      type: query
+    - name: page_size
+      value: "50"
+      type: query
   auth: inherit
 
 settings:
