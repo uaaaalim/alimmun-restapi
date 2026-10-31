@@ -15,7 +15,7 @@ http:
       {
         "name": "Alim",
         "email": "zhaba.v.kedah77@gmail.com",
-        "password": "123452678"
+        "password": "12345678"
       }
   auth: inherit
 

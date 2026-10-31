@@ -18,6 +18,8 @@ request:
   variables:
     - name: baseUrl
       value: localhost:8080
+    - name: token
+      value: yrDHtelNbUvqmNJaA9PCHykNZqfDZQBwe9P6QV1unpU
 bundled: false
 extensions:
   bruno:
