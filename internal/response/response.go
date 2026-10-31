@@ -103,3 +103,9 @@ func TooManyRequests(w http.ResponseWriter, remainingTime time.Duration) {
 		},
 	})
 }
+
+func UnauthorizedToken(w http.ResponseWriter) {
+	w.Header().Set("WWW-Authenticate", "Bearer")
+	Fault(w, http.StatusUnauthorized,
+		"UNAUTHORIZED", "Invalid or expired token")
+}
