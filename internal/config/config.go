@@ -16,8 +16,8 @@ type Config struct {
 }
 
 func LoadConfig(envFile string) (*Config, error) {
-	if err := godotenv.Load(envFile); err != nil {
-		return nil, err
+	if err := godotenv.Load(envFile); err != nil && !os.IsNotExist(err) {
+		return nil, fmt.Errorf("load env file: %w", err)
 	}
 
 	cfg := Config{

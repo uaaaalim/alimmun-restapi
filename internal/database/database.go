@@ -23,7 +23,8 @@ func Open(ctx context.Context, databaseURL string) (*gorm.DB, error) {
 	)
 
 	db, err := gorm.Open(postgres.Open(databaseURL), &gorm.Config{
-		Logger: dbLogger,
+		Logger:               dbLogger,
+		DisableAutomaticPing: true,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
