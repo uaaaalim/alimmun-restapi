@@ -2,9 +2,13 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/uaaaalim/alimmun-restapi/internal/cache"
@@ -67,5 +71,40 @@ func run() error {
 	}()
 
 	slog.Info("redis client has connected")
+
+	srv := &http.Server{
+		Addr:              ":" + cfg.Port,
+		ReadHeaderTimeout: 5 * time.Second,
+		ErrorLog:          slog.NewLogLogger(slog.Default().Handler(), slog.LevelError),
+	}
+
+	serveErr := make(chan error, 1)
+	go func() {
+		serveErr <- srv.ListenAndServe()
+	}()
+
+	slog.Info(fmt.Sprintf("http server is listening at %v", srv.Addr))
+
+	stopCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	select {
+	case <-stopCtx.Done():
+		slog.Info("shutting down")
+	case err := <-serveErr:
+		if !errors.Is(err, http.ErrServerClosed) {
+			return fmt.Errorf("HTTP server: %w", err)
+		}
+		return nil
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		_ = srv.Close()
+		return fmt.Errorf("HTTP shutdown: %w", err)
+	}
+
 	return nil
 }
