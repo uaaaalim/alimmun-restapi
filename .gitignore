@@ -1,0 +1,29 @@
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# IDE settings
+.idea/
+.vscode/
+
+# Build output
+/bin/
+/dist/
+/tmp/
+*.exe
+*.exe~
+*.test
+
+# Test coverage
+/coverage/
+/coverage.out
+/coverage.html
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
