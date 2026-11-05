@@ -10,7 +10,7 @@ import (
 )
 
 func LoadTempLogger() {
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	})))
 	slog.Info("temporary logger has loaded")
@@ -32,7 +32,8 @@ func LoadLogger(cfg *config.Config) error {
 		return fmt.Errorf("log Level %q is incorrect, supported: info, warn, error, debug", cfg.LogLevel)
 	}
 
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level})))
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: level})))
+	slog.Info("main logger has loaded from config")
 
 	return nil
 }
