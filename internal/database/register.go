@@ -2,9 +2,9 @@ package database
 
 import "gorm.io/gorm"
 
-type DatabaseServices struct {
+type Service struct {
 }
 
-func NewDatabaseServices(db *gorm.DB) *DatabaseServices {
-	return &DatabaseServices{}
+func NewDatabaseServices(db *gorm.DB) *Service {
+	return &Service{}
 }
