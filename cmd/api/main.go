@@ -75,6 +75,9 @@ func run() error {
 
 	handler := router.NewGeneralRouter(db, redisClient)
 	srv := &http.Server{
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       60 * time.Second,
 		Addr:              ":" + cfg.Port,
 		ReadHeaderTimeout: 5 * time.Second,
 		Handler:           *handler,
