@@ -32,8 +32,9 @@ func write(w http.ResponseWriter, status int, response Response) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 
-	_, err = w.Write(append(payload, '\n'))
-	slog.Error("write response", "error", err)
+	if _, err = w.Write(append(payload, '\n')); err != nil {
+		slog.Error("write response", "error", err)
+	}
 }
 
 func OK(w http.ResponseWriter, status int, data any) {
