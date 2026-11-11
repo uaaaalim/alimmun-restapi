@@ -3,19 +3,18 @@ package auth
 import (
 	"net/http"
 
-	"github.com/uaaaalim/alimmun-restapi/internal/cache"
-	"github.com/uaaaalim/alimmun-restapi/internal/database"
+	"github.com/uaaaalim/alimmun-restapi/internal/services"
 )
 
 type Handler struct {
-	DB    *database.Service
-	Cache *cache.Service
+	services *services.Services
 }
 
-func NewHandler(db *database.Service, cache *cache.Service) *Handler {
-	return &Handler{DB: db, Cache: cache}
+func NewHandler(appServices *services.Services) *Handler {
+	return &Handler{services: appServices}
 }
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /auth/login", h.login)
+	mux.HandleFunc("POST /auth/login", h.login)
+	mux.HandleFunc("POST /auth/register", h.register)
 }

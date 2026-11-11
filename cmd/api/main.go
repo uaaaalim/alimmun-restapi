@@ -15,7 +15,9 @@ import (
 	"github.com/uaaaalim/alimmun-restapi/internal/config"
 	"github.com/uaaaalim/alimmun-restapi/internal/database"
 	"github.com/uaaaalim/alimmun-restapi/internal/logger"
+	"github.com/uaaaalim/alimmun-restapi/internal/repositories"
 	"github.com/uaaaalim/alimmun-restapi/internal/router"
+	"github.com/uaaaalim/alimmun-restapi/internal/services"
 )
 
 func main() {
@@ -73,14 +75,16 @@ func run() error {
 
 	slog.Info("redis client has connected")
 
-	handler := router.NewGeneralRouter(db, redisClient)
+	repos := repositories.NewRepositories(db, redisClient)
+	appServices := services.NewServices(repos)
+	handler := router.NewGeneralRouter(appServices)
 	srv := &http.Server{
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,
 		IdleTimeout:       60 * time.Second,
 		Addr:              ":" + cfg.Port,
 		ReadHeaderTimeout: 5 * time.Second,
-		Handler:           *handler,
+		Handler:           handler,
 		ErrorLog:          slog.NewLogLogger(slog.Default().Handler(), slog.LevelError),
 	}
 
