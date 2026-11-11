@@ -4,7 +4,7 @@ CREATE TABLE users (
     name VARCHAR(120) NOT NULL,
     email VARCHAR(254) UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
-    is_activated BOOLEAN NOT NULL DEFAULT TRUE,
+    is_activated BOOLEAN NOT NULL DEFAULT FALSE,
     is_banned BOOLEAN NOT NULL DEFAULT FALSE,
     ban_reason TEXT,
     created_at TIMESTAMPTZ,
