@@ -21,6 +21,17 @@ type loginRequest struct {
 }
 
 func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
+	rl, err := h.services.Auth.IsLoginIPRateLimited(
+		r.Context(), w, r.Context().Value("real-ip").(string),
+	)
+	if err != nil {
+		response.InternalError(w, err)
+		return
+	}
+	if rl {
+		return
+	}
+
 	var input loginRequest
 	if err := utils.ReadJSON(w, r, &input, true); err != nil {
 		return
@@ -64,6 +75,17 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	rl, err = h.services.Auth.IsLoginEmailRateLimited(
+		r.Context(), w, input.Email,
+	)
+	if err != nil {
+		response.InternalError(w, err)
+		return
+	}
+	if rl {
+		return
+	}
+
 	token, err := security.GenerateToken()
 	if err != nil {
 		response.InternalError(w, err)
@@ -75,7 +97,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		input.Email,
 		input.Password,
 		r.UserAgent(),
-		r.Header.Get("X-Real-IP"),
+		r.Context().Value("real-ip").(string),
 		security.HashToken(token),
 	)
 	if err != nil {

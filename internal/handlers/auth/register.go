@@ -23,15 +23,14 @@ type registerRequest struct {
 
 // POST example.com/auth/register
 func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
-	rl, retryAfter, err := h.services.Auth.IsRegisterIPRateLimited(
-		r.Context(), r.Context().Value("real-ip").(string),
+	rl, err := h.services.Auth.IsRegisterIPRateLimited(
+		r.Context(), w, r.Context().Value("real-ip").(string),
 	)
 	if err != nil {
 		response.InternalError(w, err)
 		return
 	}
 	if rl {
-		response.RateLimited(w, retryAfter)
 		return
 	}
 
@@ -106,15 +105,14 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rl, retryAfter, err = h.services.Auth.IsRegisterEmailRateLimited(
-		r.Context(), input.Email,
+	rl, err = h.services.Auth.IsRegisterEmailRateLimited(
+		r.Context(), w, input.Email,
 	)
 	if err != nil {
 		response.InternalError(w, err)
 		return
 	}
 	if rl {
-		response.RateLimited(w, retryAfter)
 		return
 	}
 

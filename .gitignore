@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 
+# Bruno local credentials
+/bruno/environments/authEmail.yml
+
 # IDE settings
 .idea/
 .vscode/

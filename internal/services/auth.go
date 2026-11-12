@@ -5,12 +5,14 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 	"uuid"
 
 	"github.com/uaaaalim/alimmun-restapi/internal/models"
 	"github.com/uaaaalim/alimmun-restapi/internal/repositories"
+	"github.com/uaaaalim/alimmun-restapi/internal/response"
 	"github.com/uaaaalim/alimmun-restapi/internal/security"
 )
 
@@ -91,45 +93,82 @@ func (s *AuthService) Login(
 
 func (s *AuthService) IsRegisterEmailRateLimited(
 	ctx context.Context,
+	w http.ResponseWriter,
 	email string,
-) (bool, time.Duration, error) {
-	digest := sha256.Sum256([]byte(strings.ToLower(strings.TrimSpace(email))))
-
-	checks := []rateLimitCheck{
-		{
-			key:    fmt.Sprintf("rl:register:email:hour:%s", digest),
-			window: time.Minute * 15,
-			limit:  3,
-		},
-	}
-
-	return s.checkRateLimits(ctx, checks)
+) (bool, error) {
+	return s.isEmailRateLimited(ctx, w, "register", email)
 }
 
 func (s *AuthService) IsRegisterIPRateLimited(
 	ctx context.Context,
+	w http.ResponseWriter,
 	ip string,
-) (bool, time.Duration, error) {
+) (bool, error) {
+	return s.isIPRateLimited(ctx, w, "register", ip)
+}
+
+func (s *AuthService) IsLoginEmailRateLimited(
+	ctx context.Context,
+	w http.ResponseWriter,
+	email string,
+) (bool, error) {
+	return s.isEmailRateLimited(ctx, w, "login", email)
+}
+
+func (s *AuthService) IsLoginIPRateLimited(
+	ctx context.Context,
+	w http.ResponseWriter,
+	ip string,
+) (bool, error) {
+	return s.isIPRateLimited(ctx, w, "login", ip)
+}
+
+func (s *AuthService) isIPRateLimited(
+	ctx context.Context,
+	w http.ResponseWriter,
+	action, ip string,
+) (bool, error) {
 	checks := []rateLimitCheck{
 		{
-			key:    fmt.Sprintf("rl:register:ip:hour:%s", ip),
+			key:    fmt.Sprintf("rl:%s:ip:hour:%s", action, ip),
 			window: time.Hour,
 			limit:  30,
 		},
 		{
-			key:    fmt.Sprintf("rl:register:ip:minute:%s", ip),
+			key:    fmt.Sprintf("rl:%s:ip:minute:%s", action, ip),
 			window: time.Minute,
 			limit:  10,
 		},
 	}
 
-	return s.checkRateLimits(ctx, checks)
+	return s.checkRateLimits(ctx, w, checks)
+}
+
+func (s *AuthService) isEmailRateLimited(
+	ctx context.Context,
+	w http.ResponseWriter,
+	action, email string,
+) (bool, error) {
+	digest := sha256.Sum256([]byte(strings.ToLower(strings.TrimSpace(email))))
+
+	checks := []rateLimitCheck{
+		{
+			key:    fmt.Sprintf("rl:%s:email:hour:%x", action, digest),
+			window: time.Minute * 15,
+			limit:  3,
+		},
+	}
+
+	return s.checkRateLimits(ctx, w, checks)
 }
 
 func (s *AuthService) checkRateLimits(
 	ctx context.Context,
+	w http.ResponseWriter,
 	checks []rateLimitCheck,
-) (bool, time.Duration, error) {
+) (bool, error) {
+	var tempTTL time.Duration
+
 	for _, check := range checks {
 		attempts, ttl, err := s.repos.Auth.IncrementAttempts(
 			ctx,
@@ -137,13 +176,20 @@ func (s *AuthService) checkRateLimits(
 			check.window,
 		)
 		if err != nil {
-			return false, 0, fmt.Errorf("check rate limit: %w", err)
+			return false, fmt.Errorf("check rate limit: %w", err)
 		}
 
 		if attempts > check.limit && ttl > 0 {
-			return true, ttl, nil
+			if tempTTL < ttl {
+				tempTTL = ttl
+			}
 		}
 	}
 
-	return false, 0, nil
+	if tempTTL != 0 {
+		response.RateLimited(w, tempTTL)
+		return true, nil
+	}
+
+	return false, nil
 }

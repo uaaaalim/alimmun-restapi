@@ -1,0 +1,6 @@
+name: authEmail example
+variables:
+  - name: authEmail
+    value: ""
+  - name: authPassword
+    value: ""
