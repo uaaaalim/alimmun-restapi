@@ -4,8 +4,18 @@ info:
   seq: 1
 
 http:
-  method: GET
+  method: POST
   url: localhost:8080/auth/login
+  headers:
+    - name: X-Real-IP
+      value: 192.168.1.1
+  body:
+    type: json
+    data: |-
+      {
+        "email": "{{authEmail}}",
+        "password": "{{authPassword}}"
+      }
   auth: inherit
 
 settings:

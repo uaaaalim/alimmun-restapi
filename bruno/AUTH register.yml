@@ -6,6 +6,17 @@ info:
 http:
   method: POST
   url: "{{baseUrl}}/auth/register"
+  headers:
+    - name: X-Real-IP
+      value: 192.168.0.1
+  body:
+    type: json
+    data: |-
+      {
+        "email": "{{authEmail}}",
+        "name": "alim",
+        "password": "{{authPassword}}"
+      }
   auth: inherit
 
 settings:
