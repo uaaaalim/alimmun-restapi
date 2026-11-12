@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -20,6 +21,10 @@ type AuthService struct {
 func NewAuthService(repos *repositories.Repositories) *AuthService {
 	return &AuthService{repos: repos}
 }
+
+var (
+	ErrInvalidCredentials = errors.New("invalid credentials")
+)
 
 type rateLimitCheck struct {
 	key    string
@@ -43,6 +48,45 @@ func (s *AuthService) Register(ctx context.Context, email, name, password string
 		return nil, fmt.Errorf("create user: %w", err)
 	}
 	return user, nil
+}
+
+func (s *AuthService) Login(
+	ctx context.Context,
+	email, password, userAgent, ip, tokenHash string,
+) (*models.Session, error) {
+	user, err := s.repos.Users.GetByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, repositories.ErrUserNotFound) {
+			return nil, ErrInvalidCredentials
+		}
+		return nil, err
+	}
+
+	loggedIn, err := security.VerifyPassword(password, user.PasswordHash)
+	if err != nil {
+		return nil, fmt.Errorf("verify password: %w", err)
+	}
+	if !loggedIn {
+		return nil, ErrInvalidCredentials
+	}
+	if user.IsBanned {
+		return nil, ErrInvalidCredentials
+	}
+
+	session := &models.Session{
+		ID:        uuid.NewV4(),
+		UserID:    user.ID,
+		UserAgent: userAgent,
+		IP:        ip,
+		TokenHash: tokenHash,
+		ExpiresAt: time.Now().Add(time.Hour * 24),
+	}
+
+	if err := s.repos.Sessions.Create(ctx, session); err != nil {
+		return nil, fmt.Errorf("create session: %w", err)
+	}
+
+	return session, nil
 }
 
 func (s *AuthService) IsRegisterEmailRateLimited(
@@ -93,7 +137,7 @@ func (s *AuthService) checkRateLimits(
 			check.window,
 		)
 		if err != nil {
-			return false, 0, fmt.Errorf("check registration rate limit: %w", err)
+			return false, 0, fmt.Errorf("check rate limit: %w", err)
 		}
 
 		if attempts > check.limit && ttl > 0 {

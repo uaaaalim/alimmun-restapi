@@ -17,7 +17,8 @@ func NewUserRepository(db *gorm.DB) *UserRepository {
 }
 
 var (
-	ErrEmailTaken = errors.New("email is already registered")
+	ErrEmailTaken   = errors.New("email is already registered")
+	ErrUserNotFound = errors.New("user not found")
 )
 
 func (repo *UserRepository) Create(ctx context.Context, user *models.User) error {
@@ -28,4 +29,21 @@ func (repo *UserRepository) Create(ctx context.Context, user *models.User) error
 	}
 
 	return err
+}
+
+func (repo *UserRepository) GetByEmail(ctx context.Context, email string) (*models.User, error) {
+	var user models.User
+
+	err := repo.db.WithContext(ctx).
+		Where("email = ?", email).
+		First(&user).Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrUserNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
 }

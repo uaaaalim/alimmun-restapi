@@ -6,13 +6,15 @@ import (
 )
 
 type Repositories struct {
-	Users *UserRepository
-	Auth  *AuthRepository
+	Users    *UserRepository
+	Sessions *SessionRepository
+	Auth     *AuthRepository
 }
 
 func NewRepositories(db *gorm.DB, redisClient *redis.Client) *Repositories {
 	return &Repositories{
-		Users: NewUserRepository(db),
-		Auth:  NewAuthRepository(redisClient),
+		Users:    NewUserRepository(db),
+		Sessions: NewSessionRepository(db),
+		Auth:     NewAuthRepository(redisClient),
 	}
 }
