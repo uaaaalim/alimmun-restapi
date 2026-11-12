@@ -11,7 +11,7 @@ type User struct {
 	Email        string    `gorm:"type:varchar(254);not null"`
 	PasswordHash string    `gorm:"type:text;not null"`
 
-	IsActivated bool    `gorm:"not null;default:true"`
+	IsActivated bool    `gorm:"not null;default:false"`
 	IsBanned    bool    `gorm:"not null;default:false"`
 	BanReason   *string `gorm:"type:text"`
 
