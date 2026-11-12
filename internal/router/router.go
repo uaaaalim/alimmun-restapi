@@ -12,7 +12,7 @@ func NewGeneralRouter(appServices *services.Services) http.Handler {
 	mux := http.NewServeMux()
 
 	// routes
-	auth.NewHandler(appServices).RegisterRoutes(mux)
+	auth.NewAuthHandler(appServices).RegisterRoutes(mux)
 
 	// middlewares
 	handler := middlewares.RealIP(mux)

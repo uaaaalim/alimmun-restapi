@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"time"
 	"uuid"
 
 	"github.com/uaaaalim/alimmun-restapi/internal/models"
@@ -51,4 +52,27 @@ func (repo *SessionRepository) deleteOldSessions(
 
 	return tx.Where("id IN (?)", oldSessions).
 		Delete(&models.Session{}).Error
+}
+
+func (repo *SessionRepository) GetByHashedToken(ctx context.Context, hashedToken string) (*models.Session, error) {
+	var session models.Session
+
+	err := repo.db.WithContext(ctx).
+		Where("token_hash = ?", hashedToken).
+		First(&session).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return &session, nil
+}
+
+func (repo *SessionRepository) Revoke(
+	ctx context.Context,
+	sessionID uuid.UUID,
+) error {
+	return repo.db.WithContext(ctx).
+		Model(&models.Session{}).
+		Where("id = ? AND revoked_at IS NULL", sessionID).
+		Update("revoked_at", time.Now()).Error
 }

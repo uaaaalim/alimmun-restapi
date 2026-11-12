@@ -10,11 +10,13 @@ type Handler struct {
 	services *services.Services
 }
 
-func NewHandler(appServices *services.Services) *Handler {
+func NewAuthHandler(appServices *services.Services) *Handler {
 	return &Handler{services: appServices}
 }
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
+	// Route /auth
 	mux.HandleFunc("POST /auth/login", h.login)
 	mux.HandleFunc("POST /auth/register", h.register)
+	mux.HandleFunc("GET /auth/me", h.me)
 }

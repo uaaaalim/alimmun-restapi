@@ -4,3 +4,5 @@ variables:
     value: ""
   - name: authPassword
     value: ""
+  - name: authToken
+    value: ""

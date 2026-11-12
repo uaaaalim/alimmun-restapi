@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"errors"
+	"uuid"
 
 	"github.com/uaaaalim/alimmun-restapi/internal/models"
 	"gorm.io/gorm"
@@ -36,6 +37,23 @@ func (repo *UserRepository) GetByEmail(ctx context.Context, email string) (*mode
 
 	err := repo.db.WithContext(ctx).
 		Where("email = ?", email).
+		First(&user).Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrUserNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+func (repo *UserRepository) GetById(ctx context.Context, id uuid.UUID) (*models.User, error) {
+	var user models.User
+
+	err := repo.db.WithContext(ctx).
+		Where("id = ?", id).
 		First(&user).Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
