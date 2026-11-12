@@ -1,20 +1,21 @@
 info:
-  name: AUTH register
+  name: login
   type: http
-  seq: 2
+  seq: 1
 
 http:
   method: POST
-  url: "{{baseUrl}}/auth/register"
+  url: localhost:8080/auth/login
   headers:
     - name: X-Real-IP
-      value: 192.168.0.1
+      value: 192.168.1.1
+    - name: User-Agent
+      value: Dalvik/2.1.0 (Linux; U; Android 9; Redmi 6 Pro MIUI/9.6.27)
   body:
     type: json
     data: |-
       {
         "email": "{{authEmail}}",
-        "name": "alim",
         "password": "{{authPassword}}"
       }
   auth: inherit
